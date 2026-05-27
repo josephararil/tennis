@@ -80,7 +80,7 @@ export async function generate(
 
   opts?.onStage?.(0);
   const prompt = buildPrompt(input);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`;
 
   let attempt = 0;
   while (attempt < 2) {
@@ -88,7 +88,7 @@ export async function generate(
       opts?.onStage?.(Math.min(1 + attempt, 3));
       const resp = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-goog-api-key' : apiKey },
         signal: opts?.signal,
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
