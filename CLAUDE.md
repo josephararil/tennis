@@ -106,5 +106,29 @@ Screens mix CSS classes with inline styles. Add new screens the same way — no 
 - All TypeScript types are centralised in `src/types.ts`. Do not define domain types inline.
 - `src/components/ui/index.ts` is the barrel for all shared UI primitives — import from there, not individual files.
 - The `LessonPhase` card colour sequence is `surface-2 → ink → clay → surface-2` (cycling). The `PHASE_STYLES` array in `LessonOutput.tsx` defines this — do not reorder.
-- Duration splits (warm-up / technical / tactical / finish minutes) are always derived from `durationSplit()` in `src/lib/split.ts`, never hardcoded.
+- All lessons are **60 minutes**. Duration is hardcoded to `60` everywhere — there is no selector in `LessonConfig`, `ScheduleSheet`, or Settings. Do not add duration selectors or a `defaultDuration` UI.
+- Duration splits (warm-up / technical / tactical / finish minutes) are derived from `durationSplit()` in `src/lib/split.ts`, always called with `60`.
 - `src/vite-env.d.ts` must keep both `/// <reference types="vite/client" />` and `/// <reference types="vite-plugin-pwa/client" />` for `import.meta.env` and `virtual:pwa-register` to resolve correctly.
+
+## Client data model
+
+The `Client` interface (in `src/types.ts`) uses:
+
+- **`ntrp?: number | null`** — skill level on the USTA 1.0–7.0 scale. This is the sole skill indicator; there is no separate "Level" field. `archetypeId` is derived from player type + NTRP (see `AddClient.tsx`).
+- **`hasRacket?: boolean`** — whether the client brings their own racket (`true`) or the coach provides one (`false`).
+- **`ballType?: BallType`** — one of `'red' | 'orange' | 'green' | 'yellow'`. Red = foam/beginner, orange = low compression, green = green dot transition, yellow = standard.
+- There is no `gear` string field. Do not reintroduce it.
+
+The `AddClientScreen` (`src/screens/AddClient.tsx`) uses:
+- A **Type** chip selector (Adult / Junior / Group) to set the player category.
+- An **NTRP slider** (range 1.0–7.0, step 0.5) with a live description. Hidden for Group clients. `archetypeId` is auto-derived: adult ≤ 2.5 → `adult-beg`, ≤ 4.0 → `adult-int`, > 4.0 → `adult-adv`.
+- **Own racket?** Yes / No chips → `hasRacket`.
+- **Ball type** chips → `ballType`.
+
+## iOS PWA install
+
+The `IosInstallHint` component (bottom of `src/screens/Settings.tsx`) renders a step-by-step install guide only when `navigator.userAgent` matches iPhone/iPad/iPod and the app is not already running in standalone mode. Do not show it on Android or desktop.
+
+## Client deletion
+
+`ProfileScreen` (`src/screens/Profile.tsx`) has a trash icon in the AppBar trailing slot (alongside the calendar icon). Tapping it shows an inline bottom sheet confirmation that deletes the client + all their notes + lessons from IndexedDB via a Dexie transaction, updates the Zustand `ClientsSlice`, then calls `onDelete()` to navigate back to the Roster.
