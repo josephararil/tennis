@@ -1,0 +1,32 @@
+# .claudeignore
+
+# Version Control
+.git/
+.gitignore
+
+# Dependencies & Environments
+node_modules/
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Build outputs & caches
+dist/
+build/
+.next/
+.nuxt/
+.cache/
+*.log
+
+# IDEs and configuration
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets and Data (Crucial to exclude)
+.env
+.env.*
+*.db
+*.sqlite

@@ -104,18 +104,6 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
         </div>
         <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div className="field">
-            <div className="field__label">Default duration</div>
-            <Segmented
-              items={[
-                { id: 30, label: '30 min' },
-                { id: 60, label: '60 min' },
-                { id: 90, label: '90 min' },
-              ]}
-              active={settings.defaultDuration}
-              onChange={(v) => saveSettings({ defaultDuration: v as 30 | 60 | 90 })}
-            />
-          </div>
-          <div className="field">
             <div className="field__label">Regenerate lesson plan</div>
             <Segmented
               items={[
@@ -205,6 +193,9 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
           )}
         </div>
 
+        {/* Install on iPhone */}
+        <IosInstallHint />
+
         {/* App info */}
         <div style={{ padding: '12px 20px 24px', borderTop: '1px solid var(--line)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--ink-5)', fontSize: 12 }}>
@@ -216,5 +207,44 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
 
       <TabBar active="settings" onChange={onTab} />
     </div>
+  );
+}
+
+function IosInstallHint() {
+  const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  const isStandalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true;
+
+  if (!isIOS || isStandalone) return null;
+
+  return (
+    <>
+      <div className="section-head">
+        <div className="section-head__title">Install on iPhone</div>
+      </div>
+      <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 13, color: 'var(--ink-3)', lineHeight: 1.5 }}>
+            Add this app to your home screen so it opens full-screen, works offline, and stays on your dock.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              'Open this page in Safari (not Chrome)',
+              'Tap the Share button at the bottom of the screen',
+              'Scroll down and tap "Add to Home Screen"',
+              'Tap "Add" — done!',
+            ].map((step, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'var(--clay)', color: '#fff', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 1 }}>
+                  {i + 1}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--ink-2)', lineHeight: 1.5 }}>{step}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

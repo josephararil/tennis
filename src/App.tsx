@@ -76,6 +76,7 @@ export function App() {
           onSchedule={() => setSheet('schedule')}
           onAddNote={() => setSheet('note')}
           onGenerate={() => go('lessonConfig', { id: route.params.id })}
+          onDelete={async () => { await loadData(); go('roster'); }}
           onTab={onTab}
         />
       ) : <div className="app" />;

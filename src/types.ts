@@ -1,5 +1,6 @@
 export type AvatarTone = 'default' | 'ink' | 'clay';
 export type ArchetypeId = 'adult-beg' | 'adult-int' | 'adult-adv' | 'junior' | 'group' | 'other';
+export type BallType = 'red' | 'orange' | 'green' | 'yellow';
 export type NoteTag = 'Forehand' | 'Backhand' | 'Serve' | 'Footwork' | 'Tactics' | 'Mental';
 export type FocusId = 'forehand' | 'backhand' | 'serve' | 'footwork' | 'fitness' | 'tactics';
 export type Intensity = 'easy' | 'moderate' | 'hard';
@@ -17,7 +18,8 @@ export interface Client {
   style?: string;
   grip?: string;
   handed?: string;
-  gear?: string;
+  hasRacket?: boolean;
+  ballType?: BallType;
   preferences?: string;
   cadence?: string;
   members?: string[];

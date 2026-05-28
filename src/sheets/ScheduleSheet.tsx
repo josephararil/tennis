@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { Client, ConfirmSummary } from '../types';
 import { Icon } from '../components/Icon';
-import { PickerChip } from '../components/ui';
 import { createEvent } from '../services/calendar';
 import { AuthError, isConnected, requestToken } from '../services/googleAuth';
 import { useStore } from '../store';
@@ -14,12 +13,6 @@ interface Props {
 }
 
 const TIME_SLOTS = ['07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '14:00', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'];
-const DURATION_OPTIONS: { value: 30 | 60 | 90; label: string }[] = [
-  { value: 30, label: '30 min' },
-  { value: 60, label: '60 min' },
-  { value: 90, label: '90 min' },
-];
-
 function getNext7Days(): { label: string; short: string; iso: string; dateStr: string }[] {
   const result = [];
   const today = new Date();
@@ -40,7 +33,7 @@ export function ScheduleSheet({ client, onClose, onConfirm }: Props) {
 
   const [dayIndex, setDayIndex] = useState(0);
   const [time, setTime] = useState('10:00');
-  const [duration, setDuration] = useState<30 | 60 | 90>(settings?.defaultDuration ?? 60);
+  const duration = 60 as const;
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -153,21 +146,6 @@ export function ScheduleSheet({ client, onClose, onConfirm }: Props) {
                 >
                   {t}
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Duration */}
-          <div>
-            <div className="field__label" style={{ marginBottom: 8 }}>Duration</div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {DURATION_OPTIONS.map(({ value, label }) => (
-                <PickerChip
-                  key={value}
-                  value={label}
-                  selected={duration === value}
-                  onClick={() => setDuration(value)}
-                />
               ))}
             </div>
           </div>

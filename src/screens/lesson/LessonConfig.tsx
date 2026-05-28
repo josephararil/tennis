@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AppBar, PickerChip, Segmented, Field } from '../../components/ui';
+import { AppBar, Segmented, Field } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import type { Client, FocusId, Intensity, GenConfig } from '../../types';
 import { useStore } from '../../store';
@@ -21,10 +21,7 @@ const FOCUS_OPTIONS: { id: FocusId; label: string }[] = [
 
 export function LessonConfigScreen({ client, onBack, onGenerate }: Props) {
   const { settings, setGenConfig } = useStore();
-  const defaultDuration = settings?.defaultDuration ?? 60;
-
   const [focus, setFocus] = useState<FocusId[]>(['forehand']);
-  const [duration, setDuration] = useState<30 | 60 | 90>(defaultDuration);
   const [intensity, setIntensity] = useState<Intensity>('moderate');
   const [freeText, setFreeText] = useState('');
 
@@ -38,7 +35,7 @@ export function LessonConfigScreen({ client, onBack, onGenerate }: Props) {
   }
 
   function handleGenerate() {
-    const cfg: GenConfig = { focus, duration, intensity, freeText: freeText.trim() || undefined };
+    const cfg: GenConfig = { focus, duration: 60, intensity, freeText: freeText.trim() || undefined };
     setGenConfig(cfg);
     onGenerate(cfg);
   }
@@ -63,21 +60,6 @@ export function LessonConfigScreen({ client, onBack, onGenerate }: Props) {
                 >
                   {label}
                 </button>
-              ))}
-            </div>
-          </Field>
-
-          {/* Duration */}
-          <Field label="Duration">
-            <div style={{ display: 'flex', gap: 8 }}>
-              {([30, 60, 90] as const).map((d) => (
-                <PickerChip
-                  key={d}
-                  label="min"
-                  value={String(d)}
-                  selected={duration === d}
-                  onClick={() => setDuration(d)}
-                />
               ))}
             </div>
           </Field>
@@ -112,7 +94,7 @@ export function LessonConfigScreen({ client, onBack, onGenerate }: Props) {
       <div style={{ padding: '12px 20px 24px', borderTop: '1px solid var(--line)', background: 'var(--surface)' }}>
         <button className="btn btn--accent btn--block btn--lg" onClick={handleGenerate}>
           <Icon.Sparkle size={18} />
-          Generate {duration} min plan
+          Generate 60 min plan
         </button>
         {!settings?.geminiApiKey && (
           <div style={{ marginTop: 10, fontSize: 12, color: 'var(--ink-4)', textAlign: 'center' }}>

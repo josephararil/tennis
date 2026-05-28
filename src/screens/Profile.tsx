@@ -2,8 +2,15 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { AppBar, TabBar, Avatar, NTRP, Chip, NoteCard } from '../components/ui';
 import { Icon } from '../components/Icon';
-import type { TabName } from '../types';
+import type { TabName, BallType } from '../types';
 import { db } from '../services/db';
+
+const BALL_TYPE_LABELS: Record<BallType, string> = {
+  red: 'Red balls',
+  orange: 'Orange balls',
+  green: 'Green dot balls',
+  yellow: 'Standard yellow balls',
+};
 
 interface Props {
   clientId: string;
@@ -11,18 +18,37 @@ interface Props {
   onSchedule: () => void;
   onAddNote: () => void;
   onGenerate: () => void;
+  onDelete: () => Promise<void>;
   onTab: (tab: TabName) => void;
 }
 
 type ProfileTab = 'info' | 'notes' | 'lessons';
 
-export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGenerate, onTab }: Props) {
-  const { clientsById, notesByClient, setNotesForClient, settings } = useStore();
+export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGenerate, onDelete, onTab }: Props) {
+  const { clientsById, notesByClient, setNotesForClient, setClients } = useStore();
   const client = clientsById[clientId];
   const [activeTab, setActiveTab] = useState<ProfileTab>('info');
   const [lessonCount, setLessonCount] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const notes = notesByClient[clientId] ?? [];
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await db.transaction('rw', db.clients, db.notes, db.lessons, async () => {
+        await db.clients.delete(clientId);
+        await db.notes.where('clientId').equals(clientId).delete();
+        await db.lessons.where('clientId').equals(clientId).delete();
+      });
+      const allClients = await db.clients.orderBy('updatedAt').reverse().toArray();
+      setClients(allClients);
+      await onDelete();
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   useEffect(() => {
     db.notes.where('clientId').equals(clientId).reverse().sortBy('createdAt').then((ns) => {
@@ -41,17 +67,20 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
     );
   }
 
-  const defaultDuration = settings?.defaultDuration ?? 60;
-
   return (
     <div className="app">
       <AppBar
         title=""
         leading={<button className="appbar__icon" onClick={onBack}><Icon.Back /></button>}
         trailing={
-          <button className="appbar__icon" onClick={onSchedule}>
-            <Icon.Calendar size={20} />
-          </button>
+          <div style={{ display: 'flex', gap: 0 }}>
+            <button className="appbar__icon" onClick={onSchedule}>
+              <Icon.Calendar size={20} />
+            </button>
+            <button className="appbar__icon" onClick={() => setShowDeleteConfirm(true)} style={{ color: 'var(--ink-4)' }}>
+              <Icon.Trash size={20} />
+            </button>
+          </div>
         }
       />
 
@@ -73,7 +102,7 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn btn--accent btn--lg" style={{ flex: 1 }} onClick={onGenerate}>
               <Icon.Sparkle size={18} />
-              {defaultDuration} min plan
+              60 min plan
             </button>
             <button className="btn btn--ghost" style={{ height: 60, width: 60, padding: 0, borderRadius: 12, flexShrink: 0 }} onClick={onSchedule}>
               <Icon.Calendar size={20} />
@@ -127,12 +156,18 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
                 </div>
               </div>
             )}
-            {client.gear && (
+            {(client.hasRacket != null || client.ballType) && (
               <div className="row row--compact">
-                <Icon.ArrowRight size={18} style={{ color: 'var(--ink-4)', flexShrink: 0 }} />
+                <Icon.Tennis size={18} style={{ color: 'var(--ink-4)', flexShrink: 0 }} />
                 <div style={{ flex: 1 }}>
-                  <div className="field__label">Gear</div>
-                  <div style={{ fontSize: 15 }}>{client.gear}</div>
+                  <div className="field__label">Equipment</div>
+                  <div style={{ fontSize: 15 }}>
+                    {client.hasRacket != null && (
+                      <span>{client.hasRacket ? 'Has own racket' : 'No racket — coach provides'}</span>
+                    )}
+                    {client.hasRacket != null && client.ballType && <span> · </span>}
+                    {client.ballType && <span>{BALL_TYPE_LABELS[client.ballType]}</span>}
+                  </div>
                 </div>
               </div>
             )}
@@ -187,7 +222,7 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
         {/* Lessons tab */}
         {activeTab === 'lessons' && (
           <div>
-            <LessonsTab clientId={clientId} onGenerate={onGenerate} defaultDuration={defaultDuration} />
+            <LessonsTab clientId={clientId} onGenerate={onGenerate} />
           </div>
         )}
 
@@ -195,11 +230,37 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
       </div>
 
       <TabBar active="roster" onChange={onTab} />
+
+      {showDeleteConfirm && (
+        <>
+          <div
+            style={{ position: 'absolute', inset: 0, background: 'rgba(14,14,12,0.5)', zIndex: 20 }}
+            onClick={() => setShowDeleteConfirm(false)}
+          />
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--surface)', borderRadius: '16px 16px 0 0', padding: '24px 20px', zIndex: 21, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: 'var(--ink)' }}>Remove {client.name}?</div>
+            <div style={{ fontSize: 14, color: 'var(--ink-4)', lineHeight: 1.5 }}>
+              All sessions and notes for this client will be permanently deleted.
+            </div>
+            <button
+              className="btn btn--block btn--lg"
+              style={{ background: 'var(--status-bad)', color: '#fff', marginTop: 4 }}
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Removing…' : 'Remove client'}
+            </button>
+            <button className="btn btn--ghost btn--block" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-function LessonsTab({ clientId, onGenerate, defaultDuration }: { clientId: string; onGenerate: () => void; defaultDuration: number }) {
+function LessonsTab({ clientId, onGenerate }: { clientId: string; onGenerate: () => void }) {
   const [lessons, setLessons] = useState<import('../types').Lesson[]>([]);
 
   useEffect(() => {
@@ -214,7 +275,7 @@ function LessonsTab({ clientId, onGenerate, defaultDuration }: { clientId: strin
         <div style={{ marginTop: 6, fontSize: 14, color: 'var(--ink-4)', marginBottom: 20 }}>Generate a plan to get started</div>
         <button className="btn btn--accent" onClick={onGenerate}>
           <Icon.Sparkle size={18} />
-          {defaultDuration} min plan
+          60 min plan
         </button>
       </div>
     );
