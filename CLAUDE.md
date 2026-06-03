@@ -140,6 +140,8 @@ Screens mix CSS classes with inline styles. Add new screens the same way — no 
 
 `vite-plugin-pwa` with `generateSW` mode and `autoUpdate` registration. Base URL is `/tennis/` (serves from `jharari.github.io/tennis`). Icons live in `public/icons/`. Gemini API responses are **not** cached by the service worker.
 
+**Caching strategy**: `NetworkFirst` for all app assets (`/tennis/.*`) with a 3-second network timeout before falling back to cache — updates are visible on the next refresh without reinstalling. Icons and `manifest.webmanifest` are precached (they don't change between deploys). Google Fonts use `CacheFirst`. The `NavigationRoute` (SPA fallback) is disabled (`navigateFallback: null`) so navigation requests fall through to the `NetworkFirst` handler.
+
 ### CI/CD
 
 `.github/workflows/deploy.yml` builds on push to `main` and deploys `dist/` to GitHub Pages. Set `VITE_GOOGLE_CLIENT_ID` as a repository **variable** (not a secret) in GitHub → Settings → Variables → Actions.

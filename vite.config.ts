@@ -9,8 +9,21 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // No precaching — always fetch fresh from network, fall back to cache when offline
+        globPatterns: [],
+        // Disable the auto-injected NavigationRoute (which requires a precached index.html).
+        // Navigation requests fall through to the NetworkFirst rule below instead.
+        navigateFallback: null,
         runtimeCaching: [
+          {
+            urlPattern: /\/tennis\/.*/i,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'app-shell-cache',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
