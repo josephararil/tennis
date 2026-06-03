@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store';
-import { AppBar, TabBar, Dot, Segmented } from '../components/ui';
+import { AppBar, TabBar, Dot, Segmented, Field } from '../components/ui';
 import { Icon } from '../components/Icon';
 import type { TabName, Settings } from '../types';
 import { db } from '../services/db';
@@ -18,6 +18,10 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
   const [copied, setCopied] = useState(false);
   const [googleConnecting, setGoogleConnecting] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [editingCoach, setEditingCoach] = useState(false);
+  const [coachName, setCoachName] = useState('');
+  const [coachClub, setCoachClub] = useState('');
+  const [coachInitials, setCoachInitials] = useState('');
   const { googleEmail } = useStore();
 
   useEffect(() => {
@@ -42,6 +46,27 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
     await db.settings.put(updated);
     setSettings(updated);
     onSettingsChanged();
+  }
+
+  function startEditCoach() {
+    if (!settings) return;
+    setCoachName(settings.coach.name);
+    setCoachClub(settings.coach.club);
+    setCoachInitials(settings.coach.initials);
+    setEditingCoach(true);
+  }
+
+  async function saveCoach() {
+    if (!settings) return;
+    await saveSettings({
+      coach: {
+        ...settings.coach,
+        name: coachName.trim(),
+        club: coachClub.trim(),
+        initials: coachInitials.trim().slice(0, 3).toUpperCase(),
+      },
+    });
+    setEditingCoach(false);
   }
 
   async function saveKey() {
@@ -87,15 +112,36 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
           <div className="section-head__title">Coach</div>
         </div>
         <div style={{ padding: '4px 20px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 12 }}>
-            <div className="row__avatar row__avatar--ink" style={{ width: 48, height: 48, fontSize: 18, flexShrink: 0 }}>
-              {settings.coach.initials}
+          {editingCoach ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <Field label="Name">
+                <input className="field__input" value={coachName} onChange={(e) => setCoachName(e.target.value)} autoFocus />
+              </Field>
+              <Field label="Club / court">
+                <input className="field__input" value={coachClub} onChange={(e) => setCoachClub(e.target.value)} />
+              </Field>
+              <Field label="Initials">
+                <input className="field__input" value={coachInitials} onChange={(e) => setCoachInitials(e.target.value)} maxLength={3} placeholder="e.g. MG" />
+              </Field>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn btn--accent btn--block" onClick={saveCoach} disabled={!coachName.trim()}>Save</button>
+                <button className="btn btn--ghost btn--block" onClick={() => setEditingCoach(false)}>Cancel</button>
+              </div>
             </div>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 500 }}>{settings.coach.name}</div>
-              <div style={{ fontSize: 13, color: 'var(--ink-4)', marginTop: 2 }}>{settings.coach.club}</div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--surface-2)', borderRadius: 12 }}>
+              <div className="row__avatar row__avatar--ink" style={{ width: 48, height: 48, fontSize: 18, flexShrink: 0 }}>
+                {settings.coach.initials}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 16, fontWeight: 500 }}>{settings.coach.name}</div>
+                <div style={{ fontSize: 13, color: 'var(--ink-4)', marginTop: 2 }}>{settings.coach.club}</div>
+              </div>
+              <button className="appbar__icon" onClick={startEditCoach} style={{ color: 'var(--ink-4)' }}>
+                <Icon.Edit size={18} />
+              </button>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Session defaults */}

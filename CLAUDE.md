@@ -8,6 +8,27 @@ A fully installable PWA for tennis coach Martina Gledacheva — court-side CRM a
 
 The `prototype/` directory contains the original Babel/CDN design prototype (no build tooling); it is reference-only and not part of the PWA build.
 
+## Git Workflow
+
+- All work must go through feature branches and PRs — never commit directly to main.
+- Auto-create a PR after completing a feature or fix (auto-PR preference is enabled).
+
+## Documentation
+
+After any feature change or multi-file edit, update CLAUDE.md in the same session before considering the task done.
+
+## Verification & Caching
+
+When verifying changes in the browser/preview, assume stale cache first: hard-refresh or bump the service worker before debugging the code, since this app uses network-first PWA caching.
+
+## Planning vs Implementation
+
+When asked for a plan, produce a plan only — do not read files to edit or begin implementation until explicitly told to proceed.
+
+## Preserving Implicit Behavior
+
+Before editing code, call out any existing behavior (logic, cooldowns, helpers, closing braces) that the change might silently remove or alter. State what you plan to keep vs. remove and get confirmation before proceeding. Do not assume a literal reading of the request overrides behavior that wasn't mentioned.
+
 ## Commands
 
 ```bash
@@ -37,7 +58,7 @@ Without this, Google Calendar integration is disabled but the app runs fully in 
 - `tab: TabName` — active bottom tab (`today | roster | settings`)
 - `sheet: SheetName` — active bottom sheet overlay (`schedule | note | confirm | null`)
 
-Route names: `today`, `roster`, `profile`, `addClient`, `lessonConfig`, `lessonLoading`, `lessonOutput`, `settings`. Profile/lesson routes carry `params.id` (client ID). Screens are chosen via a `switch` on `route.name`; sheets layer on top as portaled overlays.
+Route names: `today`, `roster`, `profile`, `addClient`, `editClient`, `lessonConfig`, `lessonLoading`, `lessonOutput`, `settings`. Profile/lesson routes carry `params.id` (client ID). The `editClient` route renders `AddClientScreen` with `initialClient` pre-filled. Screens are chosen via a `switch` on `route.name`; sheets layer on top as portaled overlays.
 
 ### State (Zustand)
 

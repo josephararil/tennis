@@ -77,6 +77,7 @@ export function App() {
           onAddNote={() => setSheet('note')}
           onGenerate={() => go('lessonConfig', { id: route.params.id })}
           onDelete={async () => { await loadData(); go('roster'); }}
+          onEdit={() => go('editClient', { id: route.params.id })}
           onTab={onTab}
         />
       ) : <div className="app" />;
@@ -92,6 +93,19 @@ export function App() {
           }}
         />
       );
+      break;
+
+    case 'editClient':
+      screen = client ? (
+        <AddClientScreen
+          initialClient={client}
+          onBack={() => go('profile', { id: route.params.id })}
+          onSave={async () => {
+            await loadData();
+            go('profile', { id: route.params.id });
+          }}
+        />
+      ) : null;
       break;
 
     case 'lessonConfig':
