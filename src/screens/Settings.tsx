@@ -5,6 +5,7 @@ import { Icon } from '../components/Icon';
 import type { TabName, Settings } from '../types';
 import { db } from '../services/db';
 import { requestToken, signOut, isConnected } from '../services/googleAuth';
+import { driveIsConnected, driveGetEmail, driveConnect, driveDisconnect, drivePushSync, drivePullSync } from '../services/drive';
 
 interface Props {
   onTab: (tab: TabName) => void;
@@ -18,6 +19,12 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
   const [copied, setCopied] = useState(false);
   const [googleConnecting, setGoogleConnecting] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
+  const [driveConnecting, setDriveConnecting] = useState(false);
+  const [drivePushing, setDrivePushing] = useState(false);
+  const [drivePulling, setDrivePulling] = useState(false);
+  const [driveError, setDriveError] = useState<string | null>(null);
+  const [driveSuccess, setDriveSuccess] = useState<string | null>(null);
+  const [driveConnected, setDriveConnected] = useState(() => driveIsConnected());
   const [editingCoach, setEditingCoach] = useState(false);
   const [coachName, setCoachName] = useState('');
   const [coachClub, setCoachClub] = useState('');
@@ -98,6 +105,54 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
   function handleDisconnectGoogle() {
     signOut();
     saveSettings({ googleConnected: false });
+  }
+
+  async function handleDriveConnect() {
+    setDriveConnecting(true);
+    setDriveError(null);
+    setDriveSuccess(null);
+    try {
+      await driveConnect();
+      setDriveConnected(true);
+    } catch (e) {
+      setDriveError((e as Error).message ?? 'Failed to connect');
+    } finally {
+      setDriveConnecting(false);
+    }
+  }
+
+  function handleDriveDisconnect() {
+    driveDisconnect();
+    setDriveConnected(false);
+    setDriveError(null);
+    setDriveSuccess(null);
+  }
+
+  async function handleDrivePush() {
+    setDrivePushing(true);
+    setDriveError(null);
+    setDriveSuccess(null);
+    try {
+      await drivePushSync();
+      setDriveSuccess('Data saved to Drive.');
+      setTimeout(() => setDriveSuccess(null), 3000);
+    } catch (e) {
+      setDriveError((e as Error).message ?? 'Save failed');
+    } finally {
+      setDrivePushing(false);
+    }
+  }
+
+  async function handleDrivePull() {
+    setDrivePulling(true);
+    setDriveError(null);
+    setDriveSuccess(null);
+    try {
+      await drivePullSync(); // reloads page on success
+    } catch (e) {
+      setDriveError((e as Error).message ?? 'Load failed');
+      setDrivePulling(false);
+    }
   }
 
   const connected = isConnected() || (settings.googleConnected && !!googleEmail);
@@ -236,6 +291,58 @@ export function SettingsScreen({ onTab, onSettingsChanged }: Props) {
             <div style={{ fontSize: 12, color: 'var(--ink-4)', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
               Set VITE_GOOGLE_CLIENT_ID in .env.local to enable Google Calendar integration.
             </div>
+          )}
+        </div>
+
+        {/* Google Drive */}
+        <div className="section-head">
+          <div className="section-head__title">Google Drive</div>
+        </div>
+        <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Dot tone={driveConnected ? 'ok' : 'default'} />
+            <span style={{ fontSize: 13, color: 'var(--ink-3)' }}>
+              {driveConnected ? driveGetEmail() : 'Not connected'}
+            </span>
+          </div>
+          {driveError && (
+            <div style={{ fontSize: 13, color: 'var(--status-bad)', padding: '8px 12px', background: 'var(--clay-tint)', borderRadius: 8 }}>
+              {driveError}
+            </div>
+          )}
+          {driveSuccess && (
+            <div style={{ fontSize: 13, color: 'var(--ink-2)', padding: '8px 12px', background: 'var(--surface-2)', borderRadius: 8 }}>
+              {driveSuccess}
+            </div>
+          )}
+          {!driveConnected ? (
+            <button className="btn btn--ghost btn--block" onClick={handleDriveConnect} disabled={driveConnecting}>
+              <Icon.Link size={18} />
+              {driveConnecting ? 'Connecting…' : 'Connect Google Drive'}
+            </button>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn btn--ghost btn--block"
+                  onClick={handleDrivePush}
+                  disabled={drivePushing || drivePulling}
+                >
+                  {drivePushing ? 'Saving…' : 'Save to Drive'}
+                </button>
+                <button
+                  className="btn btn--ghost btn--block"
+                  onClick={handleDrivePull}
+                  disabled={drivePulling || drivePushing}
+                >
+                  {drivePulling ? 'Loading…' : 'Load from Drive'}
+                </button>
+              </div>
+              <button className="btn btn--ghost btn--block" onClick={handleDriveDisconnect}>
+                <Icon.Close size={16} />
+                Disconnect Drive
+              </button>
+            </>
           )}
         </div>
 
