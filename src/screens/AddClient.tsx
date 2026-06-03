@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AppBar, Field } from '../components/ui';
 import { Icon } from '../components/Icon';
-import type { ArchetypeId, AvatarTone, BallType } from '../types';
+import type { ArchetypeId, AvatarTone, BallType, Client } from '../types';
 import { db } from '../services/db';
 import { deriveInitials } from '../lib/format';
 import { useStore } from '../store';
@@ -9,6 +9,7 @@ import { useStore } from '../store';
 interface Props {
   onBack: () => void;
   onSave: () => Promise<void>;
+  initialClient?: Client;
 }
 
 type PlayerType = 'adult' | 'junior' | 'group';
@@ -28,6 +29,12 @@ const NTRP_DESCRIPTIONS: Record<string, string> = {
   '6.5': 'Nationally ranked player with extensive high-level competitive experience.',
   '7.0': 'World-class professional or top collegiate player.',
 };
+
+const NTRP_PRESETS = [
+  { label: 'Beginner', value: 2.0 },
+  { label: 'Intermediate', value: 3.5 },
+  { label: 'Advanced', value: 5.0 },
+];
 
 const BALL_TYPE_OPTIONS: { id: BallType; label: string; note: string }[] = [
   { id: 'red', label: 'Red', note: 'Foam / beginners' },
@@ -62,17 +69,25 @@ function toSlug(name: string): string {
   return name.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40);
 }
 
-export function AddClientScreen({ onBack, onSave }: Props) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [age, setAge] = useState('');
-  const [playerType, setPlayerType] = useState<PlayerType>('adult');
-  const [ntrp, setNtrp] = useState(3.0);
-  const [hasRacket, setHasRacket] = useState<boolean | null>(null);
-  const [ballType, setBallType] = useState<BallType | null>(null);
-  const [style, setStyle] = useState('');
-  const [preferences, setPreferences] = useState('');
-  const [cadence, setCadence] = useState('');
+function inferPlayerType(c: Client): PlayerType {
+  if (c.archetypeId === 'junior') return 'junior';
+  if (c.archetypeId === 'group') return 'group';
+  return 'adult';
+}
+
+export function AddClientScreen({ onBack, onSave, initialClient }: Props) {
+  const isEditing = !!initialClient;
+
+  const [name, setName] = useState(initialClient?.name ?? '');
+  const [phone, setPhone] = useState(initialClient?.phone ?? '');
+  const [age, setAge] = useState(initialClient?.age != null ? String(initialClient.age) : '');
+  const [playerType, setPlayerType] = useState<PlayerType>(initialClient ? inferPlayerType(initialClient) : 'adult');
+  const [ntrp, setNtrp] = useState(initialClient?.ntrp ?? 3.0);
+  const [hasRacket, setHasRacket] = useState<boolean | null>(initialClient?.hasRacket ?? null);
+  const [ballType, setBallType] = useState<BallType | null>(initialClient?.ballType ?? null);
+  const [style, setStyle] = useState(initialClient?.style ?? '');
+  const [preferences, setPreferences] = useState(initialClient?.preferences ?? '');
+  const [cadence, setCadence] = useState(initialClient?.cadence ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { setClients } = useStore();
@@ -87,28 +102,48 @@ export function AddClientScreen({ onBack, onSave }: Props) {
     setError(null);
     try {
       const now = new Date().toISOString();
-      const baseId = toSlug(name);
-      const existing = await db.clients.where('id').startsWith(baseId).toArray();
-      const id = existing.length > 0 ? `${baseId}-${Date.now()}` : baseId;
 
-      await db.clients.put({
-        id,
-        name: name.trim(),
-        initials: deriveInitials(name),
-        avatarTone: deriveAvatarTone(playerType, ntrp),
-        archetypeId: deriveArchetypeId(playerType, ntrp),
-        archetype: deriveArchetype(playerType, ntrp),
-        phone: phone.trim() || undefined,
-        age: age ? parseInt(age) : null,
-        ntrp: showNtrp ? ntrp : null,
-        style: style.trim() || undefined,
-        hasRacket: hasRacket !== null ? hasRacket : undefined,
-        ballType: ballType ?? undefined,
-        preferences: preferences.trim() || undefined,
-        cadence: cadence.trim() || undefined,
-        createdAt: now,
-        updatedAt: now,
-      });
+      if (isEditing) {
+        await db.clients.put({
+          ...initialClient,
+          name: name.trim(),
+          initials: deriveInitials(name),
+          avatarTone: deriveAvatarTone(playerType, ntrp),
+          archetypeId: deriveArchetypeId(playerType, ntrp),
+          archetype: deriveArchetype(playerType, ntrp),
+          phone: phone.trim() || undefined,
+          age: age ? parseInt(age) : null,
+          ntrp: showNtrp ? ntrp : null,
+          style: style.trim() || undefined,
+          hasRacket: hasRacket !== null ? hasRacket : undefined,
+          ballType: ballType ?? undefined,
+          preferences: preferences.trim() || undefined,
+          cadence: cadence.trim() || undefined,
+          updatedAt: now,
+        });
+      } else {
+        const baseId = toSlug(name);
+        const existing = await db.clients.where('id').startsWith(baseId).toArray();
+        const id = existing.length > 0 ? `${baseId}-${Date.now()}` : baseId;
+        await db.clients.put({
+          id,
+          name: name.trim(),
+          initials: deriveInitials(name),
+          avatarTone: deriveAvatarTone(playerType, ntrp),
+          archetypeId: deriveArchetypeId(playerType, ntrp),
+          archetype: deriveArchetype(playerType, ntrp),
+          phone: phone.trim() || undefined,
+          age: age ? parseInt(age) : null,
+          ntrp: showNtrp ? ntrp : null,
+          style: style.trim() || undefined,
+          hasRacket: hasRacket !== null ? hasRacket : undefined,
+          ballType: ballType ?? undefined,
+          preferences: preferences.trim() || undefined,
+          cadence: cadence.trim() || undefined,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
 
       const allClients = await db.clients.orderBy('updatedAt').reverse().toArray();
       setClients(allClients);
@@ -122,7 +157,7 @@ export function AddClientScreen({ onBack, onSave }: Props) {
   return (
     <div className="app">
       <AppBar
-        title="New client"
+        title={isEditing ? 'Edit client' : 'New client'}
         leading={<button className="appbar__icon" onClick={onBack}><Icon.Back /></button>}
         trailing={
           <button
@@ -151,7 +186,7 @@ export function AddClientScreen({ onBack, onSave }: Props) {
               placeholder="Full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              autoFocus
+              autoFocus={!isEditing}
             />
           </Field>
 
@@ -175,6 +210,20 @@ export function AddClientScreen({ onBack, onSave }: Props) {
           {showNtrp && (
             <Field label="NTRP level">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Presets */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {NTRP_PRESETS.map((p) => (
+                    <button
+                      key={p.label}
+                      onClick={() => setNtrp(p.value)}
+                      className={`chip chip--lg ${ntrp === p.value ? 'chip--clay' : 'chip--outline'}`}
+                      style={{ flex: 1, justifyContent: 'center' }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--ink-4)' }}>1.0</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 20, fontWeight: 600, color: 'var(--clay)' }}>{ntrpKey}</span>
@@ -260,7 +309,7 @@ export function AddClientScreen({ onBack, onSave }: Props) {
 
         <div style={{ padding: '8px 20px 24px' }}>
           <button className="btn btn--accent btn--block btn--lg" onClick={handleSave} disabled={!canSave || saving}>
-            {saving ? 'Saving…' : 'Add client'}
+            {saving ? 'Saving…' : isEditing ? 'Save changes' : 'Add client'}
           </button>
         </div>
       </div>
