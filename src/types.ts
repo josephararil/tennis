@@ -85,7 +85,7 @@ export interface CalendarSlot {
 }
 
 // Router types
-export type RouteName = 'today' | 'roster' | 'profile' | 'addClient' | 'lessonConfig' | 'lessonLoading' | 'lessonOutput' | 'settings';
+export type RouteName = 'today' | 'roster' | 'profile' | 'addClient' | 'editClient' | 'lessonConfig' | 'lessonLoading' | 'lessonOutput' | 'settings';
 export interface Route { name: RouteName; params: Record<string, string>; }
 export type TabName = 'today' | 'roster' | 'settings';
 export type SheetName = 'schedule' | 'note' | 'confirm' | null;

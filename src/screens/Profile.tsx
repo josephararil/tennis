@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store';
 import { AppBar, TabBar, Avatar, NTRP, Chip, NoteCard } from '../components/ui';
 import { Icon } from '../components/Icon';
-import type { TabName, BallType } from '../types';
+import type { TabName, BallType, Note } from '../types';
 import { db } from '../services/db';
+import { AddNoteSheet } from '../sheets/AddNoteSheet';
 
 const BALL_TYPE_LABELS: Record<BallType, string> = {
   red: 'Red balls',
@@ -19,18 +20,20 @@ interface Props {
   onAddNote: () => void;
   onGenerate: () => void;
   onDelete: () => Promise<void>;
+  onEdit: () => void;
   onTab: (tab: TabName) => void;
 }
 
 type ProfileTab = 'info' | 'notes' | 'lessons';
 
-export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGenerate, onDelete, onTab }: Props) {
+export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGenerate, onDelete, onEdit, onTab }: Props) {
   const { clientsById, notesByClient, setNotesForClient, setClients } = useStore();
   const client = clientsById[clientId];
   const [activeTab, setActiveTab] = useState<ProfileTab>('info');
   const [lessonCount, setLessonCount] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   const notes = notesByClient[clientId] ?? [];
 
@@ -74,6 +77,9 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
         leading={<button className="appbar__icon" onClick={onBack}><Icon.Back /></button>}
         trailing={
           <div style={{ display: 'flex', gap: 0 }}>
+            <button className="appbar__icon" onClick={onEdit} style={{ color: 'var(--ink-4)' }}>
+              <Icon.Edit size={20} />
+            </button>
             <button className="appbar__icon" onClick={onSchedule}>
               <Icon.Calendar size={20} />
             </button>
@@ -213,7 +219,7 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
               </div>
             )}
             {notes.map((note, i) => (
-              <NoteCard key={note.id} note={note} accent={i === 0} />
+              <NoteCard key={note.id} note={note} accent={i === 0} onClick={() => setEditingNote(note)} />
             ))}
             <div className="spacer-lg" />
           </div>
@@ -255,6 +261,15 @@ export function ProfileScreen({ clientId, onBack, onSchedule, onAddNote, onGener
             </button>
           </div>
         </>
+      )}
+
+      {editingNote && (
+        <AddNoteSheet
+          client={client}
+          note={editingNote}
+          onClose={() => setEditingNote(null)}
+          onSave={() => setEditingNote(null)}
+        />
       )}
     </div>
   );
